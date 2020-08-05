@@ -1,0 +1,43 @@
+- hosts: localhost
+  connection: local
+  vars:
+
+  tasks:
+        
+    - name: Check the version of CentOS
+      command: hostnamectl
+      register: os_check
+      ignore_errors: yes
+
+    - name: Install Role NGINX
+      local_action: command ansible-galaxy install -f geerlingguy.nginx 
+
+    - name: Check if Nginx is already installed
+      stat: path=/usr/sbin/nginx
+      register: nginx_exists
+
+    - name: Applying role Nginx
+      command: mv ~/.ansible/roles/geerlingguy.nginx ~/.ansible/roles/pwslab.nginx
+      when: not nginx_exists.stat.exists
+      ignore_errors: yes
+
+    - name: Installing NGINX
+      include_role:
+        name: pwslab.nginx
+      when: 
+        - not nginx_exists.stat.exists
+        - os_check.stdout | regex_search("CentOS Linux 8")
+      vars:
+        nginx_vhosts:
+          - listen: "80 default_server"
+            server_name: "localhost"
+            root: "/usr/share/nginx/html"
+            index: "index.php index.html index.htm"
+
+    - name: Installing NGINX
+      include_role:
+        name: pwslab.nginx
+      when: 
+        - not nginx_exists.stat.exists
+        - not os_check.stdout | regex_search("CentOS Linux 8")
+    
